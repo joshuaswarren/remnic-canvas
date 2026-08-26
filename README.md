@@ -2,7 +2,7 @@
 
 Shared memory for you and your browser agent, on one web page.
 
-Live demo: first deploy lands at `remnic-canvas.pages.dev` (see [SPEC.md](SPEC.md))
+Live demo: [remnic-canvas.pages.dev](https://remnic-canvas.pages.dev/?demo)
 Video: link added at submission
 
 Browser agents forget everything between conversations. Their memory, where it exists at all, is invisible and locked to one vendor. Remnic Canvas fixes both problems with one page.

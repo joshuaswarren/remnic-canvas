@@ -1,0 +1,316 @@
+:root {
+  --bg: #0b0e14;
+  --bg-raise: #121722;
+  --card: #f6f1e7;
+  --card-ink: #23201a;
+  --card-meta: #8a8377;
+  --human: #f2a950;
+  --agent: #6fe3ce;
+  --danger: #e5684b;
+  --thread: #3d4557;
+  --focus: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #d7dce6;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+}
+
+#root {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: 100vh;
+}
+
+.canvas {
+  padding: 40px 48px 96px;
+  position: relative;
+}
+
+.canvas-header h1 {
+  font-family: "Newsreader", serif;
+  font-weight: 500;
+  font-size: 28px;
+  color: #eef2f8;
+  margin: 0 0 4px;
+}
+
+.canvas-header p {
+  color: #79839a;
+  margin: 0 0 32px;
+  max-width: 60ch;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 340px));
+  gap: 20px;
+  align-items: start;
+}
+
+.card {
+  background: var(--card);
+  color: var(--card-ink);
+  border-radius: 10px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(35, 32, 26, 0.06);
+  transition: transform 0.3s cubic-bezier(0.22, 1.2, 0.36, 1), opacity 0.45s ease, box-shadow 0.45s ease;
+  animation: arrive 0.35s cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+@keyframes arrive {
+  from {
+    transform: scale(1.04);
+    opacity: 0;
+  }
+}
+
+.card .meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--card-meta);
+  margin-bottom: 8px;
+}
+
+.card .content {
+  font-family: "Newsreader", serif;
+  font-size: 16.5px;
+  line-height: 1.45;
+}
+
+.card .tags {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.card .tag {
+  font-size: 11px;
+  color: var(--card-meta);
+  background: rgba(35, 32, 26, 0.06);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.card.pending {
+  animation: arrive 0.35s cubic-bezier(0.22, 1.2, 0.36, 1), breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(111, 227, 206, 0.35);
+  }
+  50% {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16), 0 0 22px 4px rgba(111, 227, 206, 0.45);
+  }
+}
+
+.card.recalled {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(111, 227, 206, 0.55), 0 0 26px 2px rgba(111, 227, 206, 0.35);
+}
+
+.cards.recall-active .card:not(.recalled):not(.pending) {
+  opacity: 0.4;
+}
+
+.card.superseded {
+  opacity: 0.45;
+  filter: saturate(0.7);
+}
+
+.card.approved-flash {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--human), 0 0 24px 4px rgba(242, 169, 80, 0.5);
+}
+
+.card .lineage {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--card-meta);
+  border-top: 1px dashed rgba(35, 32, 26, 0.18);
+  padding-top: 8px;
+}
+
+.approve-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.approve-bar button {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.approve-bar .approve {
+  background: var(--human);
+  color: #2c1e08;
+}
+
+.approve-bar .edit {
+  background: transparent;
+  border-color: rgba(35, 32, 26, 0.25);
+  color: var(--card-ink);
+}
+
+.approve-bar .reject {
+  background: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.approve-bar button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.card textarea {
+  width: 100%;
+  font-family: "Newsreader", serif;
+  font-size: 15px;
+  border: 1px solid rgba(35, 32, 26, 0.25);
+  border-radius: 7px;
+  padding: 8px;
+  background: #fffdf8;
+  color: var(--card-ink);
+  resize: vertical;
+  min-height: 64px;
+}
+
+.rail {
+  background: var(--bg-raise);
+  border-left: 1px solid rgba(61, 69, 87, 0.5);
+  padding: 24px 20px;
+  overflow-y: auto;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.rail h2 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #79839a;
+  margin: 0 0 14px;
+}
+
+.rail .entry {
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: rgba(61, 69, 87, 0.22);
+  border-left: 3px solid var(--agent);
+}
+
+.rail .entry.human {
+  border-left-color: var(--human);
+}
+
+.rail .entry time {
+  display: block;
+  font-size: 11px;
+  color: #6b7488;
+  margin-top: 2px;
+}
+
+.statusline {
+  position: fixed;
+  left: 24px;
+  bottom: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+  color: #79839a;
+  background: var(--bg-raise);
+  border: 1px solid rgba(61, 69, 87, 0.6);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.statusline .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.statusline .dot.on {
+  background: var(--agent);
+}
+
+.statusline button {
+  font: inherit;
+  font-size: 12px;
+  color: #aeb7c8;
+  background: transparent;
+  border: 1px solid rgba(61, 69, 87, 0.8);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.empty {
+  color: #79839a;
+  font-family: "Newsreader", serif;
+  font-size: 22px;
+  max-width: 34ch;
+  margin-top: 12vh;
+}
+
+.empty button {
+  display: block;
+  margin-top: 20px;
+  font: inherit;
+  font-size: 15px;
+  background: var(--agent);
+  color: #06231d;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  #root {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+    max-height: none;
+    border-left: none;
+    border-top: 1px solid rgba(61, 69, 87, 0.5);
+  }
+  .canvas {
+    padding: 24px 20px 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card.pending {
+    animation: none;
+    transition: opacity 0.3s ease;
+  }
+}
