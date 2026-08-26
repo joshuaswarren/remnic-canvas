@@ -314,3 +314,12 @@ body {
     transition: opacity 0.3s ease;
   }
 }
+
+.statusline a {
+  color: #aeb7c8;
+  text-decoration: none;
+  border: 1px solid rgba(61, 69, 87, 0.8);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+}

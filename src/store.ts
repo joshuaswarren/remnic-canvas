@@ -4,23 +4,19 @@ import type { Memory, MemoryStore, RecallHit } from "./types";
 
 const STORE = "memories";
 
+export const SPACE_API = "https://remnic-canvas-space.joshua-s-warren.workers.dev";
+
 /**
- * BrowserStore: IndexedDB persistence with an in-memory MiniSearch index,
- * rebuilt on load. Fine below a few thousand memories.
+ * Shared in-memory cache + MiniSearch index over a persistence backend.
+ * Rebuilt on load; fine below a few thousand memories.
  */
-export class BrowserStore implements MemoryStore {
-  private db: Promise<IDBPDatabase>;
+abstract class IndexedMemoryStore implements MemoryStore {
   private index: MiniSearch<Memory>;
   private listeners = new Set<() => void>();
-  private cache = new Map<string, Memory>();
-  private ready: Promise<void>;
+  protected cache = new Map<string, Memory>();
+  protected ready!: Promise<void>;
 
-  constructor(dbName = "remnic-canvas") {
-    this.db = openDB(dbName, 1, {
-      upgrade(db) {
-        db.createObjectStore(STORE, { keyPath: "id" });
-      },
-    });
+  constructor() {
     this.index = new MiniSearch<Memory>({
       fields: ["content", "tags", "kind"],
       storeFields: [],
@@ -30,27 +26,34 @@ export class BrowserStore implements MemoryStore {
       },
       searchOptions: { boost: { content: 2 }, fuzzy: 0.2, prefix: true },
     });
-    this.ready = this.load();
   }
 
-  private async load(): Promise<void> {
-    const db = await this.db;
-    const all: Memory[] = await db.getAll(STORE);
+  /** Subclasses call this once their persistence fields are initialized. */
+  protected init(): void {
+    this.ready = this.loadAll().then((all) => this.replaceCache(all));
+  }
+
+  protected abstract loadAll(): Promise<Memory[]>;
+  protected abstract persist(memory: Memory): Promise<void>;
+  protected abstract wipe(): Promise<void>;
+
+  protected replaceCache(all: Memory[]): void {
+    this.cache.clear();
+    this.index.removeAll();
     for (const m of all) {
       this.cache.set(m.id, m);
       if (m.status === "active") this.index.add(m);
     }
+    this.notify();
   }
 
-  private notify(): void {
+  protected notify(): void {
     for (const l of this.listeners) l();
   }
 
   private async put(m: Memory): Promise<void> {
-    const db = await this.db;
-    await db.put(STORE, m);
-    const prev = this.cache.get(m.id);
-    if (prev && this.index.has(m.id)) this.index.discard(m.id);
+    await this.persist(m);
+    if (this.index.has(m.id)) this.index.discard(m.id);
     this.cache.set(m.id, m);
     if (m.status === "active") this.index.add(m);
     this.notify();
@@ -104,8 +107,7 @@ export class BrowserStore implements MemoryStore {
 
   async clear(): Promise<void> {
     await this.ready;
-    const db = await this.db;
-    await db.clear(STORE);
+    await this.wipe();
     this.cache.clear();
     this.index.removeAll();
     this.notify();
@@ -114,5 +116,90 @@ export class BrowserStore implements MemoryStore {
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+}
+
+export class BrowserStore extends IndexedMemoryStore {
+  private db: Promise<IDBPDatabase>;
+
+  constructor(dbName = "remnic-canvas") {
+    super();
+    this.db = openDB(dbName, 1, {
+      upgrade(db) {
+        db.createObjectStore(STORE, { keyPath: "id" });
+      },
+    });
+    this.init();
+  }
+
+  protected async loadAll(): Promise<Memory[]> {
+    return (await this.db).getAll(STORE);
+  }
+
+  protected async persist(memory: Memory): Promise<void> {
+    await (await this.db).put(STORE, memory);
+  }
+
+  protected async wipe(): Promise<void> {
+    await (await this.db).clear(STORE);
+  }
+}
+
+/** Memory set synced through the space worker; possession of the URL is the credential. */
+export class SpaceStore extends IndexedMemoryStore {
+  private pollTimer: number | undefined;
+  private lastUpdated = "";
+
+  constructor(private spaceId: string) {
+    super();
+    this.init();
+    const poll = () => void this.refresh();
+    this.pollTimer = window.setInterval(() => {
+      if (!document.hidden) poll();
+    }, 5000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) poll();
+    });
+  }
+
+  static async createSpace(): Promise<string> {
+    const res = await fetch(`${SPACE_API}/spaces`, { method: "POST" });
+    if (!res.ok) throw new Error("space_create_failed");
+    const body = (await res.json()) as { spaceId: string };
+    return body.spaceId;
+  }
+
+  private async fetchDoc(): Promise<{ updated: string; memories: Memory[] } | undefined> {
+    const res = await fetch(`${SPACE_API}/spaces/${this.spaceId}`);
+    if (!res.ok) return undefined;
+    return (await res.json()) as { updated: string; memories: Memory[] };
+  }
+
+  private async refresh(): Promise<void> {
+    const doc = await this.fetchDoc();
+    if (doc && doc.updated !== this.lastUpdated) {
+      this.lastUpdated = doc.updated;
+      this.replaceCache(doc.memories);
+    }
+  }
+
+  protected async loadAll(): Promise<Memory[]> {
+    const doc = await this.fetchDoc();
+    this.lastUpdated = doc?.updated ?? "";
+    return doc?.memories ?? [];
+  }
+
+  protected async persist(memory: Memory): Promise<void> {
+    const res = await fetch(`${SPACE_API}/spaces/${this.spaceId}/memories/${memory.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(memory),
+    });
+    if (!res.ok) throw new Error("store_unavailable");
+  }
+
+  protected async wipe(): Promise<void> {
+    // Spaces expire on their own (30-day TTL); leaving the space is the reset.
+    window.clearInterval(this.pollTimer);
   }
 }

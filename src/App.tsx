@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ulid } from "ulid";
-import { BrowserStore } from "./store";
+import { BrowserStore, SpaceStore } from "./store";
 import { registerWebMcp, type Decision, type PendingApproval, type ToolEvent } from "./tools";
 import { seedMemories } from "./seed";
 import type { ActivityEntry, Memory } from "./types";
 
-const store = new BrowserStore();
+const params = new URLSearchParams(location.search);
+const activeSpaceId = params.get("space");
+const store = activeSpaceId ? new SpaceStore(activeSpaceId) : new BrowserStore();
+
+async function shareToNewSpace(): Promise<void> {
+  const spaceId = await SpaceStore.createSpace();
+  const space = new SpaceStore(spaceId);
+  for (const m of await store.list()) {
+    if (m.status !== "forgotten") await space.create(m);
+  }
+  location.href = `${location.pathname}?space=${spaceId}`;
+}
 
 export default function App() {
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -56,7 +67,8 @@ export default function App() {
   }
 
   const pendingMemory = pending && memories.find((m) => m.id === pending.memoryId);
-  const visible = memories.filter((m) => m.status !== "forgotten");
+  const kept = memories.filter((m) => m.status !== "forgotten");
+  const visible = [...kept.filter((m) => m.status === "pending"), ...kept.filter((m) => m.status !== "pending")];
   const byId = new Map(memories.map((m) => [m.id, m]));
 
   return (
@@ -167,14 +179,37 @@ export default function App() {
             ? `Agent tools live (${surface})`
             : "No agent browser detected; open this page in ChatGPT's browser or Chrome with WebMCP enabled"}
           {pendingMemory && <strong>Waiting for you</strong>}
-          <button
-            onClick={async () => {
-              await store.clear();
-              log("human", "Cleared all memories");
-            }}
-          >
-            Reset
-          </button>
+          {activeSpaceId ? (
+            <>
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(location.href);
+                  log("human", "Copied the space link");
+                }}
+              >
+                Copy space link
+              </button>
+              <a href={location.pathname}>Leave space</a>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() =>
+                  shareToNewSpace().catch(() => log("human", "Could not create a space; sync service unreachable"))
+                }
+              >
+                Share with another agent
+              </button>
+              <button
+                onClick={async () => {
+                  await store.clear();
+                  log("human", "Cleared all memories");
+                }}
+              >
+                Reset
+              </button>
+            </>
+          )}
         </div>
       </main>
       <aside className="rail" aria-label="Agent activity">
