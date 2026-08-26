@@ -2,11 +2,11 @@
 
 ## Inspiration
 
-Browser agents forget everything between conversations. Where memory exists at all, you cannot see it, cannot edit it, and it belongs to the vendor. I build Remnic, an open-source memory store, so I wanted the missing piece: memory that lives in the open web, visible to the person it describes.
+Current browser agents lack persistence between conversations. When memory exists, it remains invisible to the user, uneditable, and owned by the vendor. Since I build Remnic, an open-source memory store, I wanted to provide the missing component: memory that resides in the open web and remains visible to the person it describes.
 
 ## What it does
 
-Remnic Canvas is one web page that acts as shared memory for you and your browser agent. The page registers five WebMCP tools: recall_memories, remember, correct_memory, forget_memory, and load_context. Your agent recalls facts, proposes new memories, corrects stale ones, and asks to forget. Every proposal lands on the canvas as a pulsing card. You approve, edit, or reject it, and the agent receives your decision as the result of its own tool call.
+Remnic Canvas functions as a single web page serving as shared memory for you and your browser agent. The page registers five WebMCP tools: recall_memories, remember, correct_memory, forget_memory, and load_context. Your agent recalls facts, proposes new memories, corrects stale ones, and asks to forget. Every proposal lands on the canvas as a pulsing card. You approve, edit, or reject it, and the agent receives your decision as the result of its own tool call.
 
 Close the conversation and start a new one: the agent still remembers, because the memory lives in the page. Click "Share with another agent" and open the link in a different agent browser: same memories. Export everything as plain markdown files that drop straight into a Remnic store.
 
