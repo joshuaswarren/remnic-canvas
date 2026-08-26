@@ -11,6 +11,7 @@
     "deploy": "wrangler pages deploy dist --project-name remnic-canvas"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "idb": "^8.0.0",
     "minisearch": "^7.1.0",
     "react": "^19.0.0",

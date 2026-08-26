@@ -3,6 +3,7 @@ import { ulid } from "ulid";
 import { BrowserStore, SpaceStore } from "./store";
 import { registerWebMcp, type Decision, type PendingApproval, type ToolEvent } from "./tools";
 import { seedMemories } from "./seed";
+import { exportZip, importFiles } from "./interchange";
 import type { ActivityEntry, Memory } from "./types";
 
 const params = new URLSearchParams(location.search);
@@ -61,13 +62,33 @@ export default function App() {
     return unsubscribe;
   }, [wantsDemo, wantsReset]);
 
+  const [fanned, setFanned] = useState<string | undefined>();
+  const [ghosts, setGhosts] = useState<Array<{ id: string; kind: string; content: string }>>([]);
+
   function decide(p: PendingApproval, decision: Decision) {
     setEditing(undefined);
+    if (p.action === "forget" && decision.status === "approved") {
+      const m = memories.find((x) => x.id === p.memoryId);
+      if (m) {
+        setGhosts((g) => [...g, { id: m.id, kind: m.kind, content: m.content }]);
+        window.setTimeout(() => setGhosts((g) => g.filter((x) => x.id !== m.id)), 700);
+      }
+    }
     p.resolve(decision);
   }
 
+  function lineageOf(m: Memory): Memory[] {
+    const chain: Memory[] = [];
+    let cursor = m.supersedes ? byId.get(m.supersedes) : undefined;
+    while (cursor && chain.length < 10) {
+      chain.push(cursor);
+      cursor = cursor.supersedes ? byId.get(cursor.supersedes) : undefined;
+    }
+    return chain;
+  }
+
   const pendingMemory = pending && memories.find((m) => m.id === pending.memoryId);
-  const kept = memories.filter((m) => m.status !== "forgotten");
+  const kept = memories.filter((m) => m.status !== "forgotten" && m.status !== "superseded");
   const visible = [...kept.filter((m) => m.status === "pending"), ...kept.filter((m) => m.status !== "pending")];
   const byId = new Map(memories.map((m) => [m.id, m]));
 
@@ -97,7 +118,6 @@ export default function App() {
           <div className={`cards${recalled.length > 0 ? " recall-active" : ""}`}>
             {visible.map((m) => {
               const isPending = pending?.memoryId === m.id;
-              const superseded = m.supersedes ? byId.get(m.supersedes) : undefined;
               const classes = [
                 "card",
                 m.status === "pending" || isPending ? "pending" : "",
@@ -127,8 +147,19 @@ export default function App() {
                       ))}
                     </div>
                   )}
-                  {superseded && superseded.status === "superseded" && (
-                    <div className="lineage">replaces: {superseded.content || "(cleared)"}</div>
+                  {m.supersedes && (
+                    <div className="lineage">
+                      <button className="lineage-toggle" onClick={() => setFanned(fanned === m.id ? undefined : m.id)}>
+                        {fanned === m.id ? "hide history" : `history (${lineageOf(m).length})`}
+                      </button>
+                      {fanned === m.id &&
+                        lineageOf(m).map((old) => (
+                          <div key={old.id} className="history-card">
+                            <span className="history-date">{new Date(old.created).toLocaleDateString()}</span>
+                            {old.content || "(cleared)"}
+                          </div>
+                        ))}
+                    </div>
                   )}
                   {isPending && pending && (
                     <div className="approve-bar" role="group" aria-label="Approve or reject this memory">
@@ -171,6 +202,15 @@ export default function App() {
                 </article>
               );
             })}
+            {ghosts.map((g) => (
+              <article key={`ghost-${g.id}`} className="card dissolve" aria-hidden="true">
+                <div className="meta">
+                  <span>{g.kind}</span>
+                  <span>forgotten</span>
+                </div>
+                <div className="content">{g.content}</div>
+              </article>
+            ))}
           </div>
         )}
         <div className="statusline">
@@ -179,6 +219,32 @@ export default function App() {
             ? `Agent tools live (${surface})`
             : "No agent browser detected; open this page in ChatGPT's browser or Chrome with WebMCP enabled"}
           {pendingMemory && <strong>Waiting for you</strong>}
+          <button
+            onClick={async () => {
+              const url = URL.createObjectURL(exportZip(await store.list()));
+              const a = Object.assign(document.createElement("a"), { href: url, download: "remnic-canvas-memories.zip" });
+              a.click();
+              URL.revokeObjectURL(url);
+              log("human", "Exported memories as Remnic markdown");
+            }}
+          >
+            Export
+          </button>
+          <label className="import-label">
+            Import
+            <input
+              type="file"
+              accept=".md,.zip"
+              multiple
+              hidden
+              onChange={async (e) => {
+                if (!e.target.files?.length) return;
+                const { imported, skipped } = await importFiles(store, e.target.files);
+                log("human", `Imported ${imported} memories${skipped ? `, skipped ${skipped}` : ""}`);
+                e.target.value = "";
+              }}
+            />
+          </label>
           {activeSpaceId ? (
             <>
               <button

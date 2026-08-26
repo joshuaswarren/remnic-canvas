@@ -323,3 +323,54 @@ body {
   padding: 3px 10px;
   font-size: 12px;
 }
+
+.lineage-toggle {
+  font: inherit;
+  font-size: 12px;
+  color: var(--card-meta);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.history-card {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--thread);
+  background: rgba(35, 32, 26, 0.05);
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  animation: arrive 0.3s ease;
+}
+
+.history-card .history-date {
+  display: block;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--card-meta);
+}
+
+.card.dissolve {
+  animation: dissolve 0.65s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes dissolve {
+  to {
+    transform: translateY(-16px) scale(0.96);
+    opacity: 0;
+    filter: saturate(0) blur(2px);
+  }
+}
+
+.import-label {
+  font-size: 12px;
+  color: #aeb7c8;
+  border: 1px solid rgba(61, 69, 87, 0.8);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+}

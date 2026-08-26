@@ -159,3 +159,18 @@ describe("forget_memory", () => {
     expect((await store.get(seed.id))?.status).toBe("active");
   });
 });
+
+describe("interchange", () => {
+  it("export/import round-trips through the zip", async () => {
+    const { exportZip, importFiles } = await import("../src/interchange");
+    const seeds = seedMemories();
+    const blob = exportZip(seeds);
+    const file = new File([new Uint8Array(await blob.arrayBuffer())], "memories.zip");
+    const target = new BrowserStore(`test-db-import-${Date.now()}`);
+    const list = { length: 1, 0: file, item: () => file, [Symbol.iterator]: [file][Symbol.iterator].bind([file]) } as unknown as FileList;
+    const { imported, skipped } = await importFiles(target, list);
+    expect(imported).toBe(10);
+    expect(skipped).toBe(0);
+    expect((await target.list()).map((m) => m.content).sort()).toEqual(seeds.map((m) => m.content).sort());
+  });
+});
