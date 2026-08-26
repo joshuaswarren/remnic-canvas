@@ -4,7 +4,7 @@ Final cut: 1 minute 52 seconds, 1080p. Narration is Joshua's voice. The submissi
 
 ## How it was produced
 
-Screen capture is the live production site at remnic-canvas.pages.dev, recorded through Chrome's screencast API at 1920x1080. The demo driver registers a model context provider implementing `document.modelContext.registerTool` and invokes the page's five registered WebMCP tools through their real `execute` contracts, the same code path an agent browser calls. The two-pane segment is two independent clients of one shared space, each with its own poller, syncing through the production Cloudflare Worker. Nothing on screen is mocked; every card, approval, correction, and sync is the deployed app doing real work. The video does not claim any specific agent product is driving; narration says "an agent" throughout.
+Screen capture is the live production site at remnic-canvas.pages.dev. It was recorded through Chrome's screencast API at 1920x1080. The demo driver registers a model context provider that implements `document.modelContext.registerTool`. It invokes the page's five registered WebMCP tools through their real `execute` contracts. That is the same code path an agent browser calls. The two-pane segment is two independent clients of one shared space. Each pane runs its own poller and syncs through the production Cloudflare Worker. Nothing on screen is mocked. Every card, approval, correction, and sync is the deployed app doing real work. The video does not claim a specific agent product is driving; the narration says "an agent" throughout.
 
 ## Beat sheet (as produced)
 
