@@ -174,3 +174,30 @@ describe("interchange", () => {
     expect((await target.list()).map((m) => m.content).sort()).toEqual(seeds.map((m) => m.content).sort());
   });
 });
+
+describe("soft pending timeout", () => {
+  it("resolves pending at the deadline and still applies a late decision", async () => {
+    const store = new BrowserStore(`test-db-late-${Date.now()}`);
+    let captured: PendingApproval | undefined;
+    const host: ToolHost = {
+      store,
+      approvalTimeoutMs: 40,
+      onEvent: () => {},
+      onRecall: () => {},
+      onPending: (p) => {
+        if (p) captured = p;
+      },
+    };
+    const result = (await findTool(host, "remember").execute({ content: "slow human memory", kind: "note" })) as {
+      status: string;
+      hint?: string;
+    };
+    expect(result.status).toBe("pending");
+    expect(result.hint).toContain("recall");
+    expect(captured).toBeDefined();
+    captured!.resolve({ status: "approved", content: "slow human memory" });
+    await new Promise((r) => setTimeout(r, 20));
+    const all = (await store.list()).filter((m) => m.status === "active");
+    expect(all.map((m) => m.content)).toEqual(["slow human memory"]);
+  });
+});

@@ -2,12 +2,11 @@ import { ulid } from "ulid";
 import type { Memory, MemoryStore } from "./types";
 import { isMemoryKind } from "./types";
 
-export const APPROVAL_TIMEOUT_MS = 120_000;
+export const APPROVAL_TIMEOUT_MS = 55_000;
 
 export type Decision =
   | { status: "approved"; content: string }
-  | { status: "rejected"; reason?: string }
-  | { status: "timed_out" };
+  | { status: "rejected"; reason?: string };
 
 export interface PendingApproval {
   memoryId: string;
@@ -26,6 +25,8 @@ export interface ToolHost {
   onEvent: (e: ToolEvent) => void;
   onPending: (p: PendingApproval | undefined) => void;
   onRecall: (ids: string[]) => void;
+  /** Override for tests; production uses APPROVAL_TIMEOUT_MS. */
+  approvalTimeoutMs?: number;
 }
 
 interface ToolError {
@@ -36,23 +37,47 @@ function invalid(message: string): ToolError {
   return { error: { code: "invalid_input", message } };
 }
 
-/** Await a human decision on a pending card, resolving timed_out after the deadline. */
-function awaitDecision(host: ToolHost, memoryId: string, action: PendingApproval["action"]): Promise<Decision> {
-  return new Promise<Decision>((resolve) => {
-    const timer = setTimeout(() => {
-      host.onPending(undefined);
-      resolve({ status: "timed_out" });
-    }, APPROVAL_TIMEOUT_MS);
-    host.onPending({
-      memoryId,
-      action,
-      resolve: (d) => {
-        clearTimeout(timer);
-        host.onPending(undefined);
-        resolve(d);
-      },
+interface SettledOutcome {
+  status: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Ask the human. Resolves with the decision's outcome, or a soft "pending"
+ * outcome at the deadline so agent runtimes with tool-call time limits get a
+ * valid response. The approval card STAYS live after the soft resolution: a
+ * later human decision still applies to the store through `apply`.
+ */
+function awaitDecision(
+  host: ToolHost,
+  memoryId: string,
+  action: PendingApproval["action"],
+  apply: (d: Decision) => Promise<SettledOutcome>,
+): Promise<SettledOutcome> {
+  const { promise, resolve } = Promise.withResolvers<SettledOutcome>();
+  let settled = false;
+  const settle = (o: SettledOutcome) => {
+    if (!settled) {
+      settled = true;
+      resolve(o);
+    }
+  };
+  const timer = setTimeout(() => {
+    settle({
+      status: "pending",
+      hint: "The human has not decided yet. The card stays on the canvas; use recall_memories or load_context later to see the outcome.",
     });
+  }, host.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS);
+  host.onPending({
+    memoryId,
+    action,
+    resolve: (d) => {
+      clearTimeout(timer);
+      host.onPending(undefined);
+      void apply(d).then(settle);
+    },
   });
+  return promise;
 }
 
 export function buildTools(host: ToolHost) {
@@ -86,7 +111,7 @@ export function buildTools(host: ToolHost) {
     {
       name: "remember",
       description:
-        "Propose a new memory. The card appears on the canvas and WAITS for the human to approve, edit, or reject it; this call resolves with their decision (or timed_out after 120 seconds). Only store durable facts, preferences, decisions, or notes the user would want kept.",
+        "Propose a new memory. The card appears on the canvas and WAITS for the human to approve, edit, or reject it; this call resolves with their decision, or with status pending if the human has not decided within about a minute (the card stays on the canvas). Only store durable facts, preferences, decisions, or notes the user would want kept.",
       inputSchema: {
         type: "object",
         properties: {
@@ -110,18 +135,16 @@ export function buildTools(host: ToolHost) {
         };
         await store.create(memory);
         host.onEvent({ tool: "remember", summary: "Agent proposed a memory, waiting for you" });
-        const decision = await awaitDecision(host, memory.id, "remember");
-        if (decision.status === "approved") {
-          await store.update({ ...memory, status: "active", content: decision.content });
-          host.onEvent({ tool: "remember", summary: "You approved the memory" });
-          return { status: "approved", id: memory.id, content: decision.content };
-        }
-        await store.tombstone(memory.id);
-        if (decision.status === "rejected") {
+        return awaitDecision(host, memory.id, "remember", async (decision) => {
+          if (decision.status === "approved") {
+            await store.update({ ...memory, status: "active", content: decision.content });
+            host.onEvent({ tool: "remember", summary: "You approved the memory" });
+            return { status: "approved", id: memory.id, content: decision.content };
+          }
+          await store.tombstone(memory.id);
           host.onEvent({ tool: "remember", summary: "You rejected the memory" });
           return { status: "rejected", ...(decision.reason ? { reason: decision.reason } : {}) };
-        }
-        return { status: "timed_out" };
+        });
       },
     },
     {
@@ -154,24 +177,22 @@ export function buildTools(host: ToolHost) {
         };
         await store.create(proposal);
         host.onEvent({ tool: "correct_memory", summary: "Agent proposed a correction, waiting for you" });
-        const decision = await awaitDecision(host, proposal.id, "correct");
-        if (decision.status === "approved") {
-          await store.supersede(old.id, { ...proposal, status: "active", content: decision.content });
-          host.onEvent({ tool: "correct_memory", summary: "You approved the correction" });
-          return { status: "approved", id: proposal.id, content: decision.content };
-        }
-        await store.tombstone(proposal.id);
-        if (decision.status === "rejected") {
+        return awaitDecision(host, proposal.id, "correct", async (decision) => {
+          if (decision.status === "approved") {
+            await store.supersede(old.id, { ...proposal, status: "active", content: decision.content });
+            host.onEvent({ tool: "correct_memory", summary: "You approved the correction" });
+            return { status: "approved", id: proposal.id, content: decision.content };
+          }
+          await store.tombstone(proposal.id);
           host.onEvent({ tool: "correct_memory", summary: "You rejected the correction" });
           return { status: "rejected", ...(decision.reason ? { reason: decision.reason } : {}) };
-        }
-        return { status: "timed_out" };
+        });
       },
     },
     {
       name: "forget_memory",
       description:
-        "Ask to remove a memory by id. The human must confirm; the memory is tombstoned (its text is cleared, the id is kept). Resolves with forgotten, declined, or timed_out.",
+        "Ask to remove a memory by id. The human must confirm; the memory is tombstoned (its text is cleared, the id is kept). Resolves with forgotten or declined, or pending when the human has not decided yet.",
       inputSchema: {
         type: "object",
         properties: {
@@ -185,17 +206,15 @@ export function buildTools(host: ToolHost) {
         const old = await store.get(id);
         if (!old || old.status !== "active") return { error: { code: "not_found", message: "no active memory with that id" } };
         host.onEvent({ tool: "forget_memory", summary: "Agent asked to forget a memory, waiting for you" });
-        const decision = await awaitDecision(host, id, "forget");
-        if (decision.status === "approved") {
-          await store.tombstone(id);
-          host.onEvent({ tool: "forget_memory", summary: "You confirmed: memory forgotten" });
-          return { status: "forgotten" };
-        }
-        if (decision.status === "rejected") {
+        return awaitDecision(host, id, "forget", async (decision) => {
+          if (decision.status === "approved") {
+            await store.tombstone(id);
+            host.onEvent({ tool: "forget_memory", summary: "You confirmed: memory forgotten" });
+            return { status: "forgotten" };
+          }
           host.onEvent({ tool: "forget_memory", summary: "You declined the forget request" });
           return { status: "declined" };
-        }
-        return { status: "timed_out" };
+        });
       },
     },
     {

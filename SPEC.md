@@ -72,7 +72,7 @@ Creates a `pending` card and awaits the human decision. Resolves with one of:
 
 - `{ status: "approved", id, content }` (content may differ if the human edited)
 - `{ status: "rejected", reason?: string }`
-- `{ status: "timed_out" }` after 120 s; the card stays pending on the canvas.
+- `{ status: "pending", hint }` after 55 s; the card stays live on the canvas and a later human decision still applies to the store. Agent runtimes with tool-call time limits get a valid response instead of a hang.
 
 ### correct_memory
 
@@ -88,7 +88,7 @@ Same await-approval semantics as `remember`. On approval the store writes the re
 { "id": "string", "reason": "string (optional)" }
 ```
 
-Requires explicit human confirmation (no edit option). Resolves `{ status: "forgotten" | "declined" | "timed_out" }`.
+Requires explicit human confirmation (no edit option). Resolves `{ status: "forgotten" | "declined" | "pending" }` with the same soft-pending semantics as `remember`.
 
 ### load_context
 

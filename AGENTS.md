@@ -40,7 +40,7 @@ Cut from the bottom, never from the top. If time runs short, spaces and Remnic c
 ## Hard product rules
 
 - **Exactly five tools.** Do not add a sixth. Do not mirror UI buttons as tools.
-- Write tools resolve only after the human decides (or a 120 s timeout returns `timed_out`). The approval gate lives in page code. The model cannot bypass it.
+- Write tools resolve when the human decides, or resolve softly with `pending` at 55 s while the card stays actionable. The approval gate lives in page code. The model cannot bypass it.
 - No accounts, no auth, no analytics, no cookies, no tracking of any kind.
 - No personal data anywhere: seed memories are fictional and reviewed against SPEC.md's seed list.
 - Everything works with JavaScript on a static host. The only server code is the optional sync Worker.
