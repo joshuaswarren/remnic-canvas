@@ -145,9 +145,13 @@ States that must exist and look intentional (DESIGN.md governs appearance):
 
 Demo support: `?demo` seeds a fixed set of ~10 fictional memories (a trip-planning persona: preferences, dates, one deliberately stale fact for the correction beat) and `?reset` clears the store. Seed content lives in one file and contains no real names or personal data.
 
-## Compatibility note (fill in on day 1)
+## Compatibility note (verified 2026-08-26)
 
-Record here, with dates: which API surface ChatGPT's in-app browser exposes, whether tool registration after page load is picked up, whether IndexedDB persists across conversations, and the Chrome flag behavior. This paragraph is the only place that knowledge lives; keep it current for the submission write-up.
+Chrome 151, `chrome://flags/#enable-webmcp-testing` enabled: `document.modelContext` and `navigator.modelContext` both exist natively, `registerTool` is a function, `provideContext` is not. All five tools register and the page reports `Agent tools live (document.modelContext.registerTool)`. WebMCP requires an origin-isolated document, so the site must send `Origin-Agent-Cluster: ?1` (served from `public/_headers`; `window.originAgentCluster === true` confirmed). The `tools` permissions policy defaults to `self`, which suits a top-level page.
+
+ChatGPT desktop app 26.818.61809 (macOS), model GPT-5.6 Sol, in-app browser: the page loads and renders correctly, and the agent can read it visually, but `modelContext` was not injected at load or later (a 1 s watcher in `src/tools.ts` registers the moment the API appears; it never appeared). Control test on the same session: `learn.chatgpt.com` advertised its five site tools, yet the agent reported "this session received no callable site tools", and Settings > Browser > Permissions has no "Enable site tools" toggle in this build. Conclusion: site-tools invocation is rollout-gated per session or account; the failure is environmental, not page-side. GPT-5.6 Luna has WebMCP disabled per OpenAI's docs; use Sol or Terra.
+
+IndexedDB persisted across a full page reload in headless Chromium (11 cards after reload). Persistence across separate ChatGPT conversations on one device is expected but was not observable while the session lacked site tools; shared spaces cover the cross-conversation demo beat regardless.
 
 ## Non-goals
 
