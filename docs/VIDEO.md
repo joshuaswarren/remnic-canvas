@@ -1,17 +1,23 @@
-# Demo video script (under 3:00)
+# Demo video
 
-The judged artifact. Everything in the repo exists so these beats work live. Record at 1440 px, dark room aesthetic matching the canvas, voiceover in plain first person. No background music (copyright rule), no title cards longer than 2 s.
+Final cut: 1 minute 52 seconds, 1080p. Narration is Joshua's voice. The submission upload lives on YouTube; the source master ships with the [v0.1.0 release](https://github.com/joshuaswarren/remnic-canvas/releases).
 
-Prep: fresh browser profile, `?demo` seeds loaded, one deliberately stale memory in the seed set ("The hotel is booked for October 12" when the trip moved to October 19).
+## How it was produced
 
-| Time | Beat | On screen |
-| --- | --- | --- |
-| 0:00-0:20 | Problem. "Browser agents forget everything between conversations. And where memory exists, you can't see it, and it belongs to the vendor, not you." | Split shot: a chat agent failing to recall yesterday's context |
-| 0:20-0:50 | First contact. Open the canvas in ChatGPT's in-app browser. Ask: "What do you know about my Lisbon trip?" Agent calls `recall_memories`; cards glow and the camera frames them; agent answers from them. | Recall highlight + activity rail |
-| 0:50-1:25 | The handoff. "Remember that my sister is joining for the first weekend." Card springs in, pulses. Edit it inline before approving ("first weekend" → exact dates). Agent acknowledges the edited version, because the tool result carried my decision back. | Pending pulse → edit → amber approval |
-| 1:25-1:50 | Memory outlives the conversation. Close the chat. New conversation, same page: "Where are we staying?" It knows. | New chat, instant recall |
-| 1:50-2:20 | The kicker. Copy the space link. Open it in Chrome with WebMCP enabled, ask Gemini-side agent the same question. Same memories. "One open web page. Any agent. Memory I own." | Chrome window side by side |
-| 2:20-2:45 | Correction + ownership. Agent notices the stale hotel date during planning, calls `correct_memory`; approve; lineage fans out. Then click export: "every memory is a markdown file; this drops straight into Remnic, the open-source memory store this is built on." | Lineage fan, export dialog |
-| 2:45-3:00 | Close. "Five WebMCP tools. No account. No backend integration. The page is the memory." URL on screen. | Hero shot of the full canvas |
+Screen capture is the live production site at remnic-canvas.pages.dev, recorded through Chrome's screencast API at 1920x1080. The demo driver registers a model context provider implementing `document.modelContext.registerTool` and invokes the page's five registered WebMCP tools through their real `execute` contracts, the same code path an agent browser calls. The two-pane segment is two independent clients of one shared space, each with its own poller, syncing through the production Cloudflare Worker. Nothing on screen is mocked; every card, approval, correction, and sync is the deployed app doing real work. The video does not claim any specific agent product is driving; narration says "an agent" throughout.
 
-Fallback: if the Chrome cross-agent beat is not reliable on recording day, replace 1:50-2:20 with a second device opening the space link inside ChatGPT, and keep the "any agent" claim scoped to what is shown.
+## Beat sheet (as produced)
+
+| Time | Beat |
+| --- | --- |
+| 0:00 | Hook: agents forget; memory is invisible and vendor-owned |
+| 0:14 | Canvas intro; demo cards land; status pill confirms native WebMCP registration |
+| 0:33 | Recall glow; agent proposes a memory; card pulses; human edits inline and approves; the edited text returns as the agent's tool result |
+| 0:57 | Two browsers, one shared space: approve on the left, it appears and recalls on the right |
+| 1:15 | Correction with visible lineage; explicit forget with dissolve |
+| 1:32 | Export as Remnic markdown; close |
+| 1:48 | End card |
+
+## Narration (as recorded)
+
+See the release assets for the exact per-segment narration text and audio.
