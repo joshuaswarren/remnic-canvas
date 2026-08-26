@@ -1,10 +1,10 @@
 # Demo video
 
-Final cut: 1 minute 52 seconds, 1080p. Narration is Joshua's voice. The submission upload lives on YouTube; the source master ships with the [v0.1.0 release](https://github.com/joshuaswarren/remnic-canvas/releases).
+Final cut: 2 minutes 0 seconds, 1080p. Narration is ElevenLabs Brian (eleven_v3), credited on the end card. The submission upload lives on YouTube; the source master ships with the [v0.1.0 release](https://github.com/joshuaswarren/remnic-canvas/releases).
 
 ## How it was produced
 
-Screen capture is the live production site at remnic-canvas.pages.dev. It was recorded through Chrome's screencast API at 1920x1080. The demo driver registers a model context provider that implements `document.modelContext.registerTool`. It invokes the page's five registered WebMCP tools through their real `execute` contracts. That is the same code path an agent browser calls. The two-pane segment is two independent clients of one shared space. Each pane runs its own poller and syncs through the production Cloudflare Worker. Nothing on screen is mocked. Every card, approval, correction, and sync is the deployed app doing real work. The video does not claim a specific agent product is driving; the narration says "an agent" throughout.
+Screen capture is the live production site at remnic-canvas.pages.dev. It was recorded through Chrome's screencast API at 1920x1080. The demo driver registers a model context provider that implements `document.modelContext.registerTool`. It invokes the page's five registered WebMCP tools through their real `execute` contracts. That is the same code path an agent browser calls. The two-pane segment is two independent clients of one shared space. Each pane runs its own poller and syncs through the production Cloudflare Worker. Nothing on screen is mocked. Every card, approval, correction, and sync is the deployed app doing real work. The video does not claim a specific agent product is driving; the narration says "an agent" throughout. The animated intro, chapter stingers, and end card are HTML and CSS pages recorded the same way.
 
 ## Beat sheet (as produced)
 
