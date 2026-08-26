@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ulid } from "ulid";
 import { BrowserStore, SpaceStore } from "./store";
-import { registerWebMcp, type Decision, type PendingApproval, type ToolEvent } from "./tools";
+import { watchAndRegisterWebMcp, type Decision, type PendingApproval, type ToolEvent } from "./tools";
 import { seedMemories } from "./seed";
 import { exportZip, importFiles } from "./interchange";
 import type { ActivityEntry, Memory } from "./types";
@@ -46,18 +46,22 @@ export default function App() {
         log("human", "Seeded 10 demo memories");
       }
       refresh();
-      const used = await registerWebMcp({
-        store,
-        onEvent: (e: ToolEvent) => log(e.summary.startsWith("You ") ? "human" : "agent", e.summary),
-        onPending: setPending,
-        onRecall: (ids) => {
-          setRecalled(ids);
-          clearTimeout(recallTimer.current);
-          recallTimer.current = window.setTimeout(() => setRecalled([]), 4000);
+      watchAndRegisterWebMcp(
+        {
+          store,
+          onEvent: (e: ToolEvent) => log(e.summary.startsWith("You ") ? "human" : "agent", e.summary),
+          onPending: setPending,
+          onRecall: (ids) => {
+            setRecalled(ids);
+            clearTimeout(recallTimer.current);
+            recallTimer.current = window.setTimeout(() => setRecalled([]), 4000);
+          },
         },
-      });
-      setSurface(used);
-      if (used) log("agent", `Tools registered via ${used}`);
+        (used) => {
+          setSurface(used);
+          log("agent", `Tools registered via ${used}`);
+        },
+      );
     })();
     return unsubscribe;
   }, [wantsDemo, wantsReset]);
@@ -217,7 +221,7 @@ export default function App() {
           <span className={`dot${surface ? " on" : ""}`} />
           {surface
             ? `Agent tools live (${surface})`
-            : "No agent browser detected; open this page in ChatGPT's browser or Chrome with WebMCP enabled"}
+            : "Waiting for an agent browser; tools register the moment one attaches"}
           {pendingMemory && <strong>Waiting for you</strong>}
           <button
             onClick={async () => {

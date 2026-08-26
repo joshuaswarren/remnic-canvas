@@ -240,3 +240,25 @@ export async function registerWebMcp(host: ToolHost): Promise<string | undefined
   }
   return undefined;
 }
+
+/**
+ * Some agent browsers inject the WebMCP API only when an agent session
+ * attaches to the tab, which can happen long after page load. Watch for the
+ * API and register the moment it appears; report each attempt's outcome so
+ * the UI can narrate it.
+ */
+export function watchAndRegisterWebMcp(host: ToolHost, onRegistered: (surface: string) => void): void {
+  let done = false;
+  const attempt = () => {
+    if (done) return;
+    void registerWebMcp(host).then((surface) => {
+      if (surface && !done) {
+        done = true;
+        window.clearInterval(timer);
+        onRegistered(surface);
+      }
+    });
+  };
+  const timer = window.setInterval(attempt, 1000);
+  attempt();
+}
