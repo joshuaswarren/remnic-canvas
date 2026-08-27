@@ -1,5 +1,7 @@
 # Devpost submission text
 
+Demo video: https://youtu.be/KsNA9drjKsc
+
 ## Inspiration
 
 Current browser agents lack persistence between conversations. When memory exists, it remains invisible to the user, uneditable, and owned by the vendor. Since I build Remnic, an open-source memory store, I wanted to provide the missing component: memory that resides in the open web and remains visible to the person it describes.

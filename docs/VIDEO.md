@@ -1,6 +1,6 @@
 # Demo video
 
-The final cut is 1 minute 58 seconds at 1080p. The contest cap is 3 minutes. ElevenLabs Brian (`eleven_v3`) reads the script. The end card credits ElevenLabs. The source master lives in this repo and in the [v0.1.0 release](https://github.com/joshuaswarren/remnic-canvas/releases).
+The final cut is 1 minute 58 seconds at 1080p. The contest cap is 3 minutes. [Watch it on YouTube](https://youtu.be/KsNA9drjKsc). ElevenLabs Brian (`eleven_v3`) reads the script. The end card credits ElevenLabs. The source master lives in this repo and in the [v0.1.0 release](https://github.com/joshuaswarren/remnic-canvas/releases).
 
 ## Production
 
