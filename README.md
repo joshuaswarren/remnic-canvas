@@ -4,6 +4,7 @@ Shared memory for you and your browser agent, on one web page.
 
 Live demo: [remnic-canvas.pages.dev](https://remnic-canvas.pages.dev/?demo)
 Video: [Watch the 1:58 demo on YouTube](https://youtu.be/KsNA9drjKsc) · [Download the source MP4](docs/assets/remnic-canvas-demo.mp4)
+Devpost: [devpost.com/software/remnic-canvas](https://devpost.com/software/remnic-canvas)
 
 Browser agents forget everything between conversations. Their memory, where it exists at all, is invisible and locked to one vendor. Remnic Canvas fixes both problems with one page.
 
